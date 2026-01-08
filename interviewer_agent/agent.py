@@ -5,16 +5,19 @@ class InterviewAgent:
     def __init__(self, api_key, resume_summary=None):
         self.client = OpenAI(api_key=api_key)
 
-        self.messages = [
-            {"role": "system", "content": SYSTEM_PROMPT}
-        ]
-
-        # 👇 CV-ni agent-in beyninə VERİRİK
+        # Combine system prompt + resume summary in ONE message
+        full_system_prompt = SYSTEM_PROMPT
+        
         if resume_summary:
-            self.messages.append({
-                "role": "system",
-                "content": f"The candidate's resume summary is:\n{resume_summary}"
-            })
+            full_system_prompt += (
+                "\n\n### Candidate Resume Summary:\n"
+                f"{resume_summary}\n"
+                "Use this information throughout the interview."
+            )
+
+        self.messages = [
+            {"role": "system", "content": full_system_prompt}
+        ]
 
     def ask(self, user_input):
         self.messages.append({"role": "user", "content": user_input})
@@ -22,7 +25,7 @@ class InterviewAgent:
         response = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=self.messages,
-            temperature=0.7
+            temperature=0.6
         )
 
         answer = response.choices[0].message.content
