@@ -1,4 +1,7 @@
 import streamlit as st
+import os
+from dotenv import load_dotenv
+
 from interviewer_agent.agent import InterviewAgent
 from interviewer_agent.evaluation import InterviewEvaluator
 from resume_processor.extractor import extract_text_from_pdf
@@ -6,7 +9,17 @@ from resume_processor.analyzer import analyze_resume
 from sandbox.executor import run_python_code
 
 # =========================
-# CONFIG
+# LOAD API KEY
+# =========================
+load_dotenv()
+API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not API_KEY:
+    st.error("ERROR: No API key found. Add it to .env as OPENAI_API_KEY")
+    st.stop()
+
+# =========================
+# PAGE CONFIG
 # =========================
 st.set_page_config(
     page_title="JobMatch AI – Mock Interviewer",
@@ -14,23 +27,15 @@ st.set_page_config(
 )
 
 # =========================
-# API KEY (replace!)
-# =========================
-API_KEY = "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"
-
-# =========================
-# UI HEADER
+# HEADER
 # =========================
 st.title("JobMatch AI – Mock Interviewer")
 st.write("Welcome! Upload your resume to begin the interview process.")
 
 # =========================
-# RESUME UPLOAD SECTION
+# RESUME UPLOAD
 # =========================
-uploaded_file = st.file_uploader(
-    "Upload your Resume (PDF)",
-    type=["pdf"]
-)
+uploaded_file = st.file_uploader("Upload your Resume (PDF)", type=["pdf"])
 
 resume_data = None
 
@@ -50,70 +55,64 @@ if uploaded_file:
 # =========================
 if resume_data:
 
-    # Create Interview Agent ONE TIME
+    
     if "agent" not in st.session_state:
         st.session_state.agent = InterviewAgent(
             api_key=API_KEY,
             resume_summary=resume_data["summary_text"]
         )
 
-    # Create conversation history
+  
     if "conversation" not in st.session_state:
         st.session_state.conversation = ""
 
     st.write("---")
     st.subheader("Interview Chat")
 
-    user_msg = st.text_input("Your message:")
+    
+    user_msg = st.text_area(
+        "Your message:",
+        height=140,
+        placeholder="Type your response or answer the interviewer's question...",
+    )
 
     if st.button("Send"):
         if user_msg.strip() == "":
-            st.warning("Please type a message.")
+            st.warning("Please type a message before sending.")
         else:
+            
             reply = st.session_state.agent.ask(user_msg)
 
-            st.session_state.conversation += (
-                f"\nUser: {user_msg}\nAI: {reply}\n"
-            )
+            
+            st.session_state.conversation += f"\nUser: {user_msg}\nAI: {reply}\n"
 
+            
             st.write("**Interviewer:**")
             st.info(reply)
 
     # =========================
-    # FINISH INTERVIEW BUTTON
+    # FINISH INTERVIEW
     # =========================
     if st.button("Finish Interview"):
         evaluator = InterviewEvaluator(API_KEY)
 
-        with st.spinner("Generating evaluation report..."):
+        with st.spinner("Generating final evaluation report..."):
             report = evaluator.evaluate(st.session_state.conversation)
 
         st.subheader("Final Evaluation Report")
         st.markdown(report)
 
     # =========================
-    # CODING QUESTION SECTION
-    # =========================
-    st.write("---")
-    st.subheader("💻 Coding Question")
-
-    if st.button("Generate Coding Question"):
-        question = st.session_state.agent.ask("Give me a coding challenge.")
-        st.session_state["coding_question"] = question
-
-    if "coding_question" in st.session_state:
-        st.info(st.session_state["coding_question"])
-
-    # =========================
-    # CODING SANDBOX SECTION
+    # CODING SANDBOX
     # =========================
     st.write("---")
     st.subheader("🧪 Coding Sandbox")
+    st.caption("Use this area to write Python code when the interviewer asks coding questions.")
 
     user_code = st.text_area(
         "Write Python code:",
         height=200,
-        placeholder="print('Hello World')"
+        placeholder="def solve():\n    pass"
     )
 
     if st.button("Run Code"):

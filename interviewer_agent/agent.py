@@ -5,7 +5,7 @@ class InterviewAgent:
     def __init__(self, api_key, resume_summary=None):
         self.client = OpenAI(api_key=api_key)
 
-        # Combine system prompt + resume summary in ONE message
+        
         full_system_prompt = SYSTEM_PROMPT
         
         if resume_summary:
